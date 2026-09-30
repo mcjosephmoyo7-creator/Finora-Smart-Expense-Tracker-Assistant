@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
+import { View, Animated, Easing, StyleSheet } from 'react-native';
 
 const BRAND = '#0E5A4A';
 const BAR_TARGETS = [22, 38, 56]; // bar heights, like a rising chart
 
-export default function SplashScreen({ onFinish }) {
+export default function SplashScreen({ onFinish }: { onFinish?: () => void }) {
   const tile = useRef(new Animated.Value(0)).current;
   const bars = useRef(BAR_TARGETS.map(() => new Animated.Value(0))).current;
   const word = useRef(new Animated.Value(0)).current;
@@ -74,13 +74,20 @@ export default function SplashScreen({ onFinish }) {
         Finora
       </Animated.Text>
 
-      <Animated.Text style={[styles.tagline, { opacity: tagline }]}>Know where your money goes.</Animated.Text>
+      <Animated.Text style={[styles.tagline, { opacity: tagline }]}>
+        Know where your money goes.
+      </Animated.Text>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center' },
+  container: {
+    flex: 1,
+    backgroundColor: BRAND,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tile: {
     width: 104,
     height: 104,
@@ -92,8 +99,25 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 22,
   },
-  barRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  bar: { width: 14, borderRadius: 4 },
-  word: { marginTop: 28, fontSize: 40, fontWeight: '800', color: '#FFFFFF', letterSpacing: 1 },
-  tagline: { marginTop: 8, fontSize: 15, color: 'rgba(255,255,255,0.75)' },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  bar: {
+    width: 14,
+    borderRadius: 4,
+  },
+  word: {
+    marginTop: 28,
+    fontSize: 40,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  tagline: {
+    marginTop: 8,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.75)',
+  },
 });

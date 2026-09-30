@@ -9,12 +9,13 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile as updateAuthProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { colors, spacing } from '../utils/theme';
+import { colors, spacing, radius } from '../utils/theme';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
+import FinoraLogo from '../components/FinoraLogo';
 
 const CURRENCIES = ['$', '€', '£', '¥', '₹', '₦', 'R', 'A$', 'C$', 'CHF'];
 
@@ -25,26 +26,36 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
   const [confirm, setConfirm] = useState('');
   const [currency, setCurrency] = useState('$');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState('');
 
   const validate = () => {
-    const newErrors = {};
-    if (!name.trim()) newErrors.name = 'Name is required';
-    if (!email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = 'Enter a valid email';
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 6) newErrors.password = 'At least 6 characters';
-    if (confirm !== password) newErrors.confirm = 'Passwords do not match';
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) newErrors.name = 'Full name is required';
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+    if (confirm !== password) {
+      newErrors.confirm = 'Passwords do not match';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSignUp = async () => {
+    setGeneralError('');
     if (!validate()) return;
     setLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      await updateProfile(cred.user, { displayName: name.trim() });
+      await updateAuthProfile(cred.user, { displayName: name.trim() });
       try {
         await setDoc(doc(db, 'users', cred.user.uid), {
           name: name.trim(),
@@ -55,17 +66,18 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
           createdAt: serverTimestamp(),
         });
       } catch (profileErr) {
-        console.error('Profile write failed:', profileErr);
+        console.error('Initial profile write failed:', profileErr);
       }
-    } catch (err) {
-      if (err.code === 'auth/email-already-in-use') {
-        setErrors({ email: 'This email is already registered' });
-      } else if (err.code === 'auth/weak-password') {
-        setErrors({ password: 'Password is too weak' });
-      } else if (err.code === 'auth/invalid-email') {
-        setErrors({ email: 'Invalid email address' });
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/email-already-in-use') {
+        setErrors((prev) => ({ ...prev, email: 'This email is already registered' }));
+      } else if (code === 'auth/weak-password') {
+        setErrors((prev) => ({ ...prev, password: 'Password should be at least 6 characters' }));
+      } else if (code === 'auth/invalid-email') {
+        setErrors((prev) => ({ ...prev, email: 'Invalid email address' }));
       } else {
-        setErrors({ email: 'Sign up failed. Please try again' });
+        setGeneralError(err?.message || 'Sign up failed. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -75,74 +87,128 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <MaterialIcons name="arrow-back" size={24} color={colors.ink} />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>Start tracking your money in minutes</Text>
+        <View style={styles.brandHeader}>
+          <FinoraLogo size={56} showWordmark />
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Take control of your spending with Finora</Text>
+        </View>
 
-        <AppInput
-          label="Full name"
-          value={name}
-          onChangeText={setName}
-          placeholder="Jane Doe"
-          error={errors.name}
-        />
+        {generalError ? (
+          <View style={styles.errorBanner}>
+            <MaterialIcons name="error-outline" size={18} color={colors.expense} />
+            <Text style={styles.errorBannerText}>{generalError}</Text>
+          </View>
+        ) : null}
 
-        <AppInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          error={errors.email}
-        />
+        <View style={styles.form}>
+          <AppInput
+            label="Full Name"
+            value={name}
+            onChangeText={(val) => {
+              setName(val);
+              if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
+            }}
+            placeholder="Jane Doe"
+            error={errors.name}
+          />
 
-        <AppInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="At least 6 characters"
-          secureTextEntry
-          error={errors.password}
-        />
+          <AppInput
+            label="Email Address"
+            value={email}
+            onChangeText={(val) => {
+              setEmail(val);
+              if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
+            }}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            error={errors.email}
+          />
 
-        <AppInput
-          label="Confirm password"
-          value={confirm}
-          onChangeText={setConfirm}
-          placeholder="Repeat your password"
-          secureTextEntry
-          error={errors.confirm}
-        />
-
-        <Text style={styles.label}>Currency</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.currencyRow}>
-          {CURRENCIES.map((c) => (
-            <TouchableOpacity
-              key={c}
-              onPress={() => setCurrency(c)}
-              style={[styles.currencyChip, currency === c && styles.currencyChipActive]}
+          {/* Currency Picker */}
+          <View style={styles.currencySection}>
+            <Text style={styles.fieldLabel}>Default Currency</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.currencyRow}
             >
-              <Text style={[styles.currencyText, currency === c && styles.currencyTextActive]}>
-                {c}
-              </Text>
+              {CURRENCIES.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.currencyChip, currency === c && styles.currencyChipSelected]}
+                  onPress={() => setCurrency(c)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.currencyChipText,
+                      currency === c && styles.currencyChipTextSelected,
+                    ]}
+                  >
+                    {c}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <AppInput
+            label="Password"
+            value={password}
+            onChangeText={(val) => {
+              setPassword(val);
+              if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
+            }}
+            placeholder="Minimum 6 characters"
+            secureTextEntry
+            autoCapitalize="none"
+            error={errors.password}
+          />
+
+          <AppInput
+            label="Confirm Password"
+            value={confirm}
+            onChangeText={(val) => {
+              setConfirm(val);
+              if (errors.confirm) setErrors((prev) => ({ ...prev, confirm: '' }));
+            }}
+            placeholder="Re-type your password"
+            secureTextEntry
+            autoCapitalize="none"
+            error={errors.confirm}
+          />
+
+          <AppButton
+            title="Create Account"
+            onPress={handleSignUp}
+            loading={loading}
+            disabled={loading}
+            style={styles.submitBtn}
+          />
+
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>Already registered? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
+              <Text style={styles.signInLink}>Sign in</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <AppButton title="Create Account" onPress={handleSignUp} loading={loading} />
-
-        <View style={styles.signinRow}>
-          <Text style={styles.signinPrompt}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
-            <Text style={styles.signinLink}>Sign in</Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -155,66 +221,101 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   scrollContent: {
-    flexGrow: 1,
-    padding: spacing.xl,
-    paddingTop: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: Platform.OS === 'ios' ? spacing.xxl : spacing.lg,
+    paddingBottom: spacing.xxxl * 2,
   },
   backButton: {
-    marginBottom: spacing.xl,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  brandHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     color: colors.ink,
-    marginBottom: spacing.sm,
+    marginTop: spacing.md,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.inkMuted,
-    marginBottom: spacing.xxl,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
-  label: {
+  form: {
+    gap: spacing.xs,
+  },
+  fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.inkMuted,
-    marginBottom: spacing.sm,
+    color: colors.ink,
+    marginBottom: spacing.xs,
+  },
+  currencySection: {
+    marginBottom: spacing.md,
   },
   currencyRow: {
-    marginBottom: spacing.xl,
+    gap: spacing.xs,
+    paddingVertical: 4,
   },
   currencyChip: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: 999,
+    borderRadius: radius.chip,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    marginRight: spacing.sm,
+    minWidth: 44,
+    alignItems: 'center',
   },
-  currencyChipActive: {
+  currencyChipSelected: {
     backgroundColor: colors.brand,
     borderColor: colors.brand,
   },
-  currencyText: {
-    fontSize: 15,
-    fontWeight: '500',
+  currencyChipText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.ink,
   },
-  currencyTextActive: {
+  currencyChipTextSelected: {
     color: colors.white,
   },
-  signinRow: {
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.expenseBg,
+    padding: spacing.md,
+    borderRadius: radius.input,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  errorBannerText: {
+    color: colors.expense,
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+  },
+  submitBtn: {
+    marginTop: spacing.sm,
+  },
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginTop: spacing.xl,
   },
-  signinPrompt: {
+  footerText: {
     fontSize: 14,
     color: colors.inkMuted,
   },
-  signinLink: {
+  signInLink: {
     fontSize: 14,
+    fontWeight: '700',
     color: colors.brand,
-    fontWeight: '600',
   },
 });

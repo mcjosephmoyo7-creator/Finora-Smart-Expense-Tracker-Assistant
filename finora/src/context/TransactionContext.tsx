@@ -9,6 +9,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
@@ -18,8 +19,8 @@ interface TransactionContextValue {
   transactions: Transaction[];
   loading: boolean;
   error: string | null;
-  addTransaction: (data: Omit<Transaction, 'id'>) => Promise<string>;
-  updateTransaction: (id: string, data: Partial<Transaction>) => Promise<void>;
+  addTransaction: (data: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  updateTransaction: (id: string, data: Partial<Omit<Transaction, 'id'>>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
 }
 
@@ -49,6 +50,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    setLoading(true);
     const q = query(
       collection(db, 'users', user.uid, 'transactions'),
       orderBy('date', 'desc')
@@ -57,11 +59,22 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const txs = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          date: doc.data().date?.toDate?.() || new Date(doc.data().date),
-        }));
+        const txs: Transaction[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          const parsedDate =
+            data.date?.toDate?.() || (data.date ? new Date(data.date) : new Date());
+          return {
+            id: docSnap.id,
+            title: data.title || '',
+            amount: Number(data.amount) || 0,
+            type: data.type === 'income' ? 'income' : 'expense',
+            category: data.category || 'Other',
+            date: isNaN(parsedDate.getTime()) ? new Date() : parsedDate,
+            note: data.note || '',
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+          };
+        });
         setTransactions(txs);
         setLoading(false);
         setError(null);
@@ -76,32 +89,52 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, [user]);
 
-  const addTransaction = async (data) => {
+  const addTransaction = async (data: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('Not authenticated');
     const docRef = await addDoc(collection(db, 'users', user.uid, 'transactions'), {
-      ...data,
+      title: data.title.trim(),
+      amount: Math.abs(Number(data.amount)),
+      type: data.type,
+      category: data.category,
+      date: Timestamp.fromDate(data.date instanceof Date ? data.date : new Date(data.date)),
+      note: data.note ? data.note.trim() : '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
     return docRef.id;
   };
 
-  const updateTransaction = async (id, data) => {
+  const updateTransaction = async (id: string, data: Partial<Omit<Transaction, 'id'>>) => {
     if (!user) throw new Error('Not authenticated');
-    await updateDoc(doc(db, 'users', user.uid, 'transactions', id), {
-      ...data,
+    const payload: any = {
       updatedAt: serverTimestamp(),
-    });
+    };
+    if (data.title !== undefined) payload.title = data.title.trim();
+    if (data.amount !== undefined) payload.amount = Math.abs(Number(data.amount));
+    if (data.type !== undefined) payload.type = data.type;
+    if (data.category !== undefined) payload.category = data.category;
+    if (data.note !== undefined) payload.note = data.note.trim();
+    if (data.date !== undefined) {
+      payload.date = Timestamp.fromDate(data.date instanceof Date ? data.date : new Date(data.date));
+    }
+    await updateDoc(doc(db, 'users', user.uid, 'transactions', id), payload);
   };
 
-  const deleteTransaction = async (id) => {
+  const deleteTransaction = async (id: string) => {
     if (!user) throw new Error('Not authenticated');
     await deleteDoc(doc(db, 'users', user.uid, 'transactions', id));
   };
 
   return (
     <TransactionContext.Provider
-      value={{ transactions, loading, error, addTransaction, updateTransaction, deleteTransaction }}
+      value={{
+        transactions,
+        loading,
+        error,
+        addTransaction,
+        updateTransaction,
+        deleteTransaction,
+      }}
     >
       {children}
     </TransactionContext.Provider>

@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
 
 import SplashScreen from './src/screens/SplashScreen';
 import { AuthProvider } from './src/context/AuthContext';
@@ -43,7 +44,9 @@ export default function App() {
         <AuthProvider>
           <TransactionProvider>
             <View style={{ flex: 1 }}>
-              <RootNavigator />
+              <NavigationContainer>
+                <RootNavigator />
+              </NavigationContainer>
               {showSplash && (
                 <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
                   <SplashScreen onFinish={() => setShowSplash(false)} />

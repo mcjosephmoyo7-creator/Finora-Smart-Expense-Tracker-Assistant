@@ -1,3 +1,7 @@
+import { MaterialIcons } from '@expo/vector-icons';
+
+export type IconName = keyof typeof MaterialIcons.glyphMap;
+
 export interface Transaction {
   id: string;
   title: string;
@@ -6,8 +10,8 @@ export interface Transaction {
   category: string;
   date: Date;
   note?: string;
-  createdAt?: { toDate?: () => Date };
-  updatedAt?: { toDate?: () => Date };
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface Profile {
@@ -16,13 +20,13 @@ export interface Profile {
   currency: string;
   monthlyBudget: number;
   categoryLimits: Record<string, number>;
-  createdAt?: { toDate?: () => Date };
+  createdAt?: any;
 }
 
 export interface Category {
   id: string;
   label: string;
-  icon: string;
+  icon: IconName;
   color: string;
 }
 

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -16,10 +17,16 @@ import { formatCurrency } from '../utils/calculations';
 import { formatDate } from '../utils/dateHelpers';
 import AppButton from '../components/AppButton';
 
-export default function TransactionDetailsScreen({ navigation, route }: { navigation: any; route: any }) {
+export default function TransactionDetailsScreen({
+  navigation,
+  route,
+}: {
+  navigation: any;
+  route: any;
+}) {
   const { profile } = useAuth();
   const { transactions, deleteTransaction } = useTransactions();
-  const { id } = route.params;
+  const { id } = route?.params || {};
 
   const transaction = useMemo(() => transactions.find((t) => t.id === id), [transactions, id]);
 
@@ -27,15 +34,19 @@ export default function TransactionDetailsScreen({ navigation, route }: { naviga
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <MaterialIcons name="arrow-back" size={24} color={colors.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Transaction</Text>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 40 }} />
         </View>
         <View style={styles.missing}>
-          <Text style={styles.missingText}>This transaction was deleted.</Text>
-          <AppButton title="Go Back" onPress={() => navigation.goBack()} />
+          <MaterialIcons name="receipt-long" size={54} color={colors.inkFaint} />
+          <Text style={styles.missingTitle}>Transaction Not Found</Text>
+          <Text style={styles.missingText}>
+            This entry may have been removed or is no longer available.
+          </Text>
+          <AppButton title="Return to Activity" onPress={() => navigation.goBack()} />
         </View>
       </View>
     );
@@ -46,71 +57,130 @@ export default function TransactionDetailsScreen({ navigation, route }: { naviga
   const currency = profile?.currency || '$';
 
   const handleDelete = () => {
-    Alert.alert('Delete transaction', `"${transaction.title}" will be removed.`, [
+    Alert.alert('Delete transaction', `Are you sure you want to delete "${transaction.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await deleteTransaction(transaction.id);
-          navigation.goBack();
+          try {
+            await deleteTransaction(transaction.id);
+            navigation.goBack();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete transaction.');
+          }
         },
       },
     ]);
   };
 
+  const getCreatedDateText = () => {
+    if (transaction.createdAt?.toDate) {
+      return formatDate(transaction.createdAt.toDate());
+    }
+    if (transaction.createdAt) {
+      return formatDate(transaction.createdAt);
+    }
+    return 'Recent';
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={styles.backBtn}
+        >
           <MaterialIcons name="arrow-back" size={24} color={colors.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Details</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>Transaction Details</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('AddEditTransaction', { transaction })}
+          style={styles.editHeaderBtn}
+        >
+          <MaterialIcons name="edit" size={20} color={colors.brand} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.amountSection}>
-          <View style={[styles.badge, { backgroundColor: isIncome ? colors.incomeBg : colors.expenseBg }]}>
-            <MaterialIcons name={category.icon} size={32} color={isIncome ? colors.income : colors.expense} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Main Amount Card */}
+        <View style={styles.amountCard}>
+          <View
+            style={[
+              styles.categoryBadge,
+              { backgroundColor: isIncome ? colors.incomeBg : colors.expenseBg },
+            ]}
+          >
+            <MaterialIcons
+              name={category.icon}
+              size={32}
+              color={isIncome ? colors.income : colors.expense}
+            />
           </View>
-          <Text style={[styles.amount, { color: isIncome ? colors.income : colors.expense }]}>
+          <Text
+            style={[
+              styles.amountText,
+              { color: isIncome ? colors.income : colors.expense },
+            ]}
+          >
             {isIncome ? '+' : '-'}{formatCurrency(transaction.amount, currency)}
           </Text>
-          <Text style={styles.title}>{transaction.title}</Text>
-        </View>
+          <Text style={styles.titleText}>{transaction.title}</Text>
 
-        <View style={styles.detailsCard}>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Category</Text>
-            <View style={styles.rowValue}>
-              <MaterialIcons name={category.icon} size={16} color={colors.inkMuted} />
-              <Text style={styles.rowText}>{category.label}</Text>
-            </View>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Date</Text>
-            <Text style={styles.rowText}>{formatDate(transaction.date)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Note</Text>
-            <Text style={styles.rowText}>{transaction.note || 'No note added'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Created</Text>
-            <Text style={styles.rowText}>
-              {transaction.createdAt?.toDate?.() ? formatDate(transaction.createdAt.toDate()) : 'Just now'}
+          <View
+            style={[
+              styles.typePill,
+              { backgroundColor: isIncome ? colors.incomeBg : colors.expenseBg },
+            ]}
+          >
+            <Text
+              style={[
+                styles.typePillText,
+                { color: isIncome ? colors.income : colors.expense },
+              ]}
+            >
+              {isIncome ? 'Income' : 'Expense'}
             </Text>
           </View>
         </View>
 
+        {/* Detailed Information */}
+        <View style={styles.detailsCard}>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Category</Text>
+            <View style={styles.rowValue}>
+              <MaterialIcons name={category.icon} size={16} color={category.color} />
+              <Text style={styles.rowText}>{category.label}</Text>
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Date</Text>
+            <Text style={styles.rowText}>{formatDate(transaction.date)}</Text>
+          </View>
+
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Note</Text>
+            <Text style={[styles.rowText, !transaction.note && styles.rowTextMuted]}>
+              {transaction.note ? transaction.note : 'No note added'}
+            </Text>
+          </View>
+
+          <View style={[styles.row, { borderBottomWidth: 0 }]}>
+            <Text style={styles.rowLabel}>Logged on</Text>
+            <Text style={styles.rowText}>{getCreatedDateText()}</Text>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
         <View style={styles.actions}>
           <AppButton
-            title="Edit"
+            title="Edit Transaction"
             variant="secondary"
             onPress={() => navigation.navigate('AddEditTransaction', { transaction })}
           />
-          <AppButton title="Delete" variant="danger" onPress={handleDelete} />
+          <AppButton title="Delete Transaction" variant="danger" onPress={handleDelete} />
         </View>
       </ScrollView>
     </View>
@@ -127,8 +197,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    paddingTop: spacing.xl,
+    paddingTop: Platform.OS === 'ios' ? spacing.xxl : spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backBtn: {
+    padding: spacing.xs,
+  },
+  editHeaderBtn: {
+    padding: spacing.xs,
   },
   headerTitle: {
     fontSize: 18,
@@ -136,13 +215,20 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   content: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl * 2,
+  },
+  amountCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
     padding: spacing.xl,
-  },
-  amountSection: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card,
   },
-  badge: {
+  categoryBadge: {
     width: 64,
     height: 64,
     borderRadius: 32,
@@ -150,21 +236,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  amount: {
+  amountText: {
     fontSize: 36,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: spacing.xs,
   },
-  title: {
+  titleText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.ink,
+    textAlign: 'center',
+  },
+  typePill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.chip,
+    marginTop: spacing.sm,
+  },
+  typePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   detailsCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
     ...shadows.card,
   },
   row: {
@@ -178,6 +279,7 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 14,
     color: colors.inkMuted,
+    fontWeight: '500',
   },
   rowValue: {
     flexDirection: 'row',
@@ -185,9 +287,14 @@ const styles = StyleSheet.create({
   },
   rowText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.ink,
-    marginLeft: spacing.xs,
+    marginLeft: 6,
+  },
+  rowTextMuted: {
+    color: colors.inkFaint,
+    fontWeight: '400',
+    fontStyle: 'italic',
   },
   actions: {
     gap: spacing.md,
@@ -196,11 +303,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xl,
+    padding: spacing.xxl,
+  },
+  missingTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.ink,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
   },
   missingText: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.inkMuted,
-    marginBottom: spacing.lg,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
 });

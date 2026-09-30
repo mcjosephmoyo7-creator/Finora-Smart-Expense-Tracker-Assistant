@@ -1,27 +1,31 @@
-import { Category } from '../types';
+import { Category, IconName } from '../types';
 
 export const ALL_CATEGORIES: Category[] = [
-  { id: 'food', label: 'Food & Dining', icon: 'restaurant', color: '#E0A030' },
-  { id: 'transport', label: 'Transport', icon: 'directions-car', color: '#4A90D9' },
-  { id: 'shopping', label: 'Shopping', icon: 'shopping-bag', color: '#7B68EE' },
-  { id: 'entertainment', label: 'Entertainment', icon: 'movie', color: '#D9534F' },
-  { id: 'bills', label: 'Bills & Utilities', icon: 'receipt', color: '#2E9E6B' },
-  { id: 'health', label: 'Health', icon: 'favorite', color: '#E91E63' },
-  { id: 'education', label: 'Education', icon: 'school', color: '#3F51B5' },
-  { id: 'travel', label: 'Travel', icon: 'flight', color: '#00BCD4' },
-  { id: 'groceries', label: 'Groceries', icon: 'shopping-cart', color: '#4CAF50' },
-  { id: 'salary', label: 'Salary', icon: 'account-balance', color: '#0E5A4A' },
-  { id: 'freelance', label: 'Freelance', icon: 'work', color: '#FF9800' },
-  { id: 'investments', label: 'Investments', icon: 'trending-up', color: '#009688' },
-  { id: 'other', label: 'Other', icon: 'more-horiz', color: '#9E9E9E' },
+  // Expense categories (from project scope)
+  { id: 'Groceries', label: 'Groceries', icon: 'shopping-cart', color: '#16A34A' },
+  { id: 'Dining Out', label: 'Dining Out', icon: 'restaurant', color: '#F59E0B' },
+  { id: 'Transport', label: 'Transport', icon: 'directions-car', color: '#3B82F6' },
+  { id: 'Housing', label: 'Housing', icon: 'home', color: '#6366F1' },
+  { id: 'Utilities', label: 'Utilities', icon: 'power', color: '#14B8A6' },
+  { id: 'Health', label: 'Health', icon: 'favorite', color: '#EC4899' },
+  { id: 'Shopping', label: 'Shopping', icon: 'shopping-bag', color: '#8B5CF6' },
+  { id: 'Entertainment', label: 'Entertainment', icon: 'movie', color: '#EF4444' },
+  { id: 'Education', label: 'Education', icon: 'school', color: '#06B6D4' },
+  { id: 'Other', label: 'Other', icon: 'more-horiz', color: '#6B7280' },
+
+  // Income categories (from project scope)
+  { id: 'Salary', label: 'Salary', icon: 'payments', color: '#10B981' },
+  { id: 'Freelance', label: 'Freelance', icon: 'laptop-mac', color: '#F59E0B' },
+  { id: 'Gift', label: 'Gift', icon: 'card-giftcard', color: '#EC4899' },
+  { id: 'Other Income', label: 'Other Income', icon: 'attach-money', color: '#3B82F6' },
 ];
 
 export const EXPENSE_CATEGORIES = ALL_CATEGORIES.filter((c) =>
-  ['food', 'transport', 'shopping', 'entertainment', 'bills', 'health', 'education', 'travel', 'groceries', 'other'].includes(c.id)
+  ['Groceries', 'Dining Out', 'Transport', 'Housing', 'Utilities', 'Health', 'Shopping', 'Entertainment', 'Education', 'Other'].includes(c.id)
 );
 
 export const INCOME_CATEGORIES = ALL_CATEGORIES.filter((c) =>
-  ['salary', 'freelance', 'investments', 'other'].includes(c.id)
+  ['Salary', 'Freelance', 'Gift', 'Other Income'].includes(c.id)
 );
 
 export function getCategoriesForType(type: 'income' | 'expense'): Category[] {
@@ -29,5 +33,9 @@ export function getCategoriesForType(type: 'income' | 'expense'): Category[] {
 }
 
 export function getCategoryById(id: string): Category {
-  return ALL_CATEGORIES.find((c) => c.id === id) || ALL_CATEGORIES[ALL_CATEGORIES.length - 1];
+  return (
+    ALL_CATEGORIES.find((c) => c.id === id || c.label.toLowerCase() === (id || '').toLowerCase()) ||
+    ALL_CATEGORIES.find((c) => c.id === 'Other') ||
+    ALL_CATEGORIES[0]
+  );
 }

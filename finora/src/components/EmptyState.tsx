@@ -2,9 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, spacing } from '../utils/theme';
+import { IconName } from '../types';
 
 interface EmptyStateProps {
-  icon?: string;
+  icon?: IconName;
   message: string;
   subMessage?: string;
 }
@@ -13,7 +14,7 @@ export default function EmptyState({ icon = 'inbox', message, subMessage }: Empt
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <MaterialIcons name={icon} size={48} color={colors.inkFaint} />
+        <MaterialIcons name={icon} size={44} color={colors.inkFaint} />
       </View>
       <Text style={styles.message}>{message}</Text>
       {subMessage && <Text style={styles.subMessage}>{subMessage}</Text>}
@@ -29,13 +30,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   message: {
     fontSize: 16,

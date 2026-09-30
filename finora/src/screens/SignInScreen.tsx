@@ -12,9 +12,10 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
-import { colors, spacing } from '../utils/theme';
+import { colors, spacing, radius } from '../utils/theme';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
+import FinoraLogo from '../components/FinoraLogo';
 
 export default function SignInScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
@@ -26,24 +27,27 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
 
   const handleSignIn = async () => {
     setError('');
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all fields');
+    if (!email.trim() || !password) {
+      setError('Please fill in both email and password.');
       return;
     }
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-    } catch (err) {
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        setError('Email or password is incorrect');
-      } else if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address');
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many attempts. Please try again later');
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (
+        code === 'auth/invalid-credential' ||
+        code === 'auth/wrong-password' ||
+        code === 'auth/user-not-found'
+      ) {
+        setError('Incorrect email or password. Please try again.');
+      } else if (code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later or reset password.');
       } else {
-        setError('Something went wrong. Please try again');
+        setError(err?.message || 'Sign in failed. Please check your network and credentials.');
       }
     } finally {
       setLoading(false);
@@ -53,79 +57,116 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
   const handleForgotPassword = async () => {
     setError('');
     if (!email.trim()) {
-      setError('Enter your email first');
+      setError('Please enter your email above first to receive reset instructions.');
       return;
     }
     try {
       await sendPasswordResetEmail(auth, email.trim());
       setResetSent(true);
-    } catch (err) {
-      setError('Could not send reset email. Check the address and try again.');
+    } catch (err: any) {
+      setError('Could not send password reset email. Check email address.');
     }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <MaterialIcons name="arrow-back" size={24} color={colors.ink} />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to your Finora account</Text>
+        {/* Brand Logo & Welcome */}
+        <View style={styles.brandHeader}>
+          <FinoraLogo size={64} showWordmark tagline="Smart Expense Tracker Assistant" />
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>Sign in to access your financial dashboard</Text>
+        </View>
 
         {resetSent && (
           <View style={styles.successBox}>
             <MaterialIcons name="check-circle" size={20} color={colors.income} />
-            <Text style={styles.successText}>Reset email sent! Check your inbox.</Text>
+            <Text style={styles.successText}>Password reset email sent! Check your inbox.</Text>
           </View>
         )}
 
-        <AppInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+        {error ? (
+          <View style={styles.errorBox}>
+            <MaterialIcons name="error-outline" size={18} color={colors.expense} />
+            <Text style={styles.errorBoxText}>{error}</Text>
+          </View>
+        ) : null}
 
-        <View style={styles.passwordContainer}>
+        <View style={styles.form}>
           <AppInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Your password"
-            secureTextEntry={!showPassword}
+            label="Email Address"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setError('');
+            }}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.eyeButton}
-          >
-            <MaterialIcons
-              name={showPassword ? 'visibility-off' : 'visibility'}
-              size={20}
-              color={colors.inkFaint}
+
+          <View style={styles.passwordWrapper}>
+            <AppInput
+              label="Password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                setError('');
+              }}
+              placeholder="Enter your password"
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
             />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialIcons
+                name={showPassword ? 'visibility-off' : 'visibility'}
+                size={20}
+                color={colors.inkMuted}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleForgotPassword}
+            style={styles.forgotBtn}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
-        </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          <AppButton
+            title="Sign In"
+            onPress={handleSignIn}
+            loading={loading}
+            disabled={loading}
+          />
 
-        <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotButton}>
-          <Text style={styles.forgotText}>Forgot password?</Text>
-        </TouchableOpacity>
-
-        <AppButton title="Sign In" onPress={handleSignIn} loading={loading} />
-
-        <View style={styles.signupRow}>
-          <Text style={styles.signupPrompt}>New to Finora? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.signupLink}>Create an account</Text>
-          </TouchableOpacity>
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+              <Text style={styles.signUpLink}>Sign up</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -138,73 +179,98 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   scrollContent: {
-    flexGrow: 1,
-    padding: spacing.xl,
-    paddingTop: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: Platform.OS === 'ios' ? spacing.xxl : spacing.lg,
+    paddingBottom: spacing.xxxl * 2,
   },
   backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  brandHeader: {
+    alignItems: 'center',
     marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     color: colors.ink,
-    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.inkMuted,
-    marginBottom: spacing.xxl,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
-  passwordContainer: {
+  form: {
+    gap: spacing.xs,
+  },
+  passwordWrapper: {
     position: 'relative',
   },
-  eyeButton: {
+  eyeBtn: {
     position: 'absolute',
-    right: spacing.lg,
-    top: 38,
-    padding: spacing.xs,
+    right: spacing.md,
+    top: 40,
+    zIndex: 10,
+    padding: 4,
   },
-  error: {
-    fontSize: 14,
-    color: colors.danger,
-    marginBottom: spacing.md,
-  },
-  forgotButton: {
+  forgotBtn: {
     alignSelf: 'flex-end',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
+    marginTop: -4,
   },
   forgotText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.brand,
-    fontWeight: '500',
   },
   successBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.incomeBg,
     padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
+    borderRadius: radius.input,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   successText: {
-    fontSize: 14,
     color: colors.income,
-    marginLeft: spacing.sm,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
   },
-  signupRow: {
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.expenseBg,
+    padding: spacing.md,
+    borderRadius: radius.input,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  errorBoxText: {
+    color: colors.expense,
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+  },
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginTop: spacing.xl,
   },
-  signupPrompt: {
+  footerText: {
     fontSize: 14,
     color: colors.inkMuted,
   },
-  signupLink: {
+  signUpLink: {
     fontSize: 14,
+    fontWeight: '700',
     color: colors.brand,
-    fontWeight: '600',
   },
 });

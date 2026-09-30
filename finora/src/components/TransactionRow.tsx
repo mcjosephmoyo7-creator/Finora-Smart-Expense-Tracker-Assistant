@@ -19,8 +19,17 @@ export default function TransactionRow({ transaction, onPress, currency }: Trans
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.iconBox, { backgroundColor: isIncome ? colors.incomeBg : colors.expenseBg }]}>
-        <MaterialIcons name={category.icon} size={20} color={isIncome ? colors.income : colors.expense} />
+      <View
+        style={[
+          styles.iconBox,
+          { backgroundColor: isIncome ? colors.incomeBg : colors.expenseBg },
+        ]}
+      >
+        <MaterialIcons
+          name={category.icon}
+          size={20}
+          color={isIncome ? colors.income : colors.expense}
+        />
       </View>
       <View style={styles.middle}>
         <Text style={styles.title} numberOfLines={1}>
@@ -30,7 +39,12 @@ export default function TransactionRow({ transaction, onPress, currency }: Trans
           {category.label} · {formatDateShort(transaction.date)}
         </Text>
       </View>
-      <Text style={[styles.amount, { color: isIncome ? colors.income : colors.expense }]}>
+      <Text
+        style={[
+          styles.amount,
+          { color: isIncome ? colors.income : colors.expense },
+        ]}
+      >
         {isIncome ? '+' : '-'}{formatCurrency(transaction.amount, currency)}
       </Text>
     </TouchableOpacity>
@@ -46,6 +60,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   iconBox: {
     width: 40,

@@ -13,7 +13,10 @@ interface CategoryChipProps {
 export default function CategoryChip({ category, selected, onPress }: CategoryChipProps) {
   return (
     <TouchableOpacity
-      style={[styles.container, selected && styles.selected]}
+      style={[
+        styles.container,
+        selected && styles.selected,
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -52,5 +55,6 @@ const styles = StyleSheet.create({
   },
   textSelected: {
     color: colors.white,
+    fontWeight: '600',
   },
 });

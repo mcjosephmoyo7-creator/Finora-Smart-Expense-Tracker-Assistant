@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
@@ -16,16 +17,17 @@ import { useAuth } from '../context/AuthContext';
 import { colors, spacing, radius, shadows } from '../utils/theme';
 import AppButton from '../components/AppButton';
 import AppInput from '../components/AppInput';
+import FinoraLogo from '../components/FinoraLogo';
 
 const CURRENCIES = ['$', '€', '£', '¥', '₹', '₦', 'R', 'A$', 'C$', 'CHF'];
 
-export default function SettingsScreen(): JSX.Element {
+export default function SettingsScreen() {
   const { user, profile, updateProfile } = useAuth();
 
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(profile?.name || '');
-  const [showCurrency, setShowCurrency] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -35,34 +37,49 @@ export default function SettingsScreen(): JSX.Element {
     try {
       await updateProfile({ name: nameInput.trim() });
       setEditingName(false);
+      Alert.alert('Success', 'Profile name updated.');
     } catch {
       Alert.alert('Error', 'Could not update name.');
     }
   };
 
+  const handleSelectCurrency = async (curr: string) => {
+    try {
+      await updateProfile({ currency: curr });
+      setShowCurrencyModal(false);
+    } catch {
+      Alert.alert('Error', 'Could not update currency.');
+    }
+  };
+
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword) {
-      Alert.alert('Missing info', 'Enter both current and new password.');
+      Alert.alert('Missing info', 'Please enter both current and new password.');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Too short', 'New password must be at least 6 characters.');
+      Alert.alert('Password too short', 'New password must be at least 6 characters.');
       return;
     }
+    if (!user || !user.email) {
+      Alert.alert('Error', 'User account not found.');
+      return;
+    }
+
     setPasswordLoading(true);
     try {
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
-      setShowPassword(false);
+      setShowPasswordModal(false);
       setCurrentPassword('');
       setNewPassword('');
-      Alert.alert('Done', 'Password updated successfully.');
-    } catch (err) {
-      if (err.code === 'auth/requires-recent-login' || err.code === 'auth/wrong-password') {
-        Alert.alert('Incorrect', 'Your current password is wrong.');
+      Alert.alert('Success', 'Your password has been changed successfully.');
+    } catch (err: any) {
+      if (err?.code === 'auth/wrong-password' || err?.code === 'auth/invalid-credential') {
+        Alert.alert('Incorrect password', 'Your current password was entered incorrectly.');
       } else {
-        Alert.alert('Error', 'Could not change password. Try again.');
+        Alert.alert('Error', err?.message || 'Could not change password. Try again later.');
       }
     } finally {
       setPasswordLoading(false);
@@ -70,7 +87,7 @@ export default function SettingsScreen(): JSX.Element {
   };
 
   const handleSignOut = () => {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+    Alert.alert('Sign out', 'Are you sure you want to sign out of Finora?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: () => signOut(auth) },
     ]);
@@ -78,12 +95,18 @@ export default function SettingsScreen(): JSX.Element {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.pageTitle}>Settings</Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <Text style={styles.pageTitle}>Account & Settings</Text>
 
+        {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{(profile?.name || 'F')[0].toUpperCase()}</Text>
+            <Text style={styles.avatarText}>
+              {(profile?.name || user?.displayName || 'F')[0].toUpperCase()}
+            </Text>
           </View>
           <View style={styles.profileInfo}>
             {editingName ? (
@@ -92,107 +115,172 @@ export default function SettingsScreen(): JSX.Element {
                   style={styles.nameInput}
                   value={nameInput}
                   onChangeText={setNameInput}
-                  placeholder="Your name"
+                  placeholder="Your full name"
                   placeholderTextColor={colors.inkFaint}
+                  autoFocus
                 />
-                <TouchableOpacity onPress={handleSaveName} style={styles.iconBtn}>
+                <TouchableOpacity onPress={handleSaveName} style={styles.iconActionBtn}>
                   <MaterialIcons name="check" size={20} color={colors.income} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setEditingName(false)} style={styles.iconBtn}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setNameInput(profile?.name || '');
+                    setEditingName(false);
+                  }}
+                  style={styles.iconActionBtn}
+                >
                   <MaterialIcons name="close" size={20} color={colors.inkFaint} />
                 </TouchableOpacity>
               </View>
             ) : (
-              <View style={styles.nameRow}>
-                <Text style={styles.name}>{profile?.name || 'User'}</Text>
-                <TouchableOpacity onPress={() => { setNameInput(profile?.name || ''); setEditingName(true); }}>
-                  <MaterialIcons name="edit" size={18} color={colors.brand} />
+              <View style={styles.nameDisplayRow}>
+                <Text style={styles.profileName}>
+                  {profile?.name || user?.displayName || 'Finora User'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setNameInput(profile?.name || user?.displayName || '');
+                    setEditingName(true);
+                  }}
+                  style={styles.iconActionBtn}
+                >
+                  <MaterialIcons name="edit" size={16} color={colors.brand} />
                 </TouchableOpacity>
               </View>
             )}
-            <Text style={styles.email}>{user?.email}</Text>
+            <Text style={styles.profileEmail}>{user?.email || 'No email registered'}</Text>
           </View>
         </View>
 
+        {/* Preferences Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+          <Text style={styles.sectionHeader}>Preferences</Text>
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => setShowCurrencyModal(true)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.settingIcon}>
+                <MaterialIcons name="monetization-on" size={20} color={colors.brand} />
+              </View>
+              <View style={styles.settingMiddle}>
+                <Text style={styles.settingLabel}>Currency Symbol</Text>
+                <Text style={styles.settingSub}>Choose your default display currency</Text>
+              </View>
+              <Text style={styles.settingValue}>{profile?.currency || '$'}</Text>
+              <MaterialIcons name="chevron-right" size={20} color={colors.inkFaint} />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-          <TouchableOpacity style={styles.row} onPress={() => setShowCurrency(true)}>
-            <MaterialIcons name="attach-money" size={20} color={colors.inkMuted} />
-            <Text style={styles.rowLabel}>Currency</Text>
-            <Text style={styles.rowValue}>{profile?.currency || '$'}</Text>
-            <MaterialIcons name="chevron-right" size={20} color={colors.inkFaint} />
+        {/* Security Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>Security</Text>
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => setShowPasswordModal(true)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.settingIcon}>
+                <MaterialIcons name="lock-outline" size={20} color={colors.ink} />
+              </View>
+              <View style={styles.settingMiddle}>
+                <Text style={styles.settingLabel}>Change Password</Text>
+                <Text style={styles.settingSub}>Update your login credentials</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color={colors.inkFaint} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Sign Out Button */}
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.8}>
+            <MaterialIcons name="logout" size={20} color={colors.expense} />
+            <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Security</Text>
-
-          <TouchableOpacity style={styles.row} onPress={() => setShowPassword(true)}>
-            <MaterialIcons name="lock" size={20} color={colors.inkMuted} />
-            <Text style={styles.rowLabel}>Change password</Text>
-            <MaterialIcons name="chevron-right" size={20} color={colors.inkFaint} />
-          </TouchableOpacity>
+        {/* App Info Footer */}
+        <View style={styles.footer}>
+          <FinoraLogo size={32} />
+          <Text style={styles.footerBrand}>Finora Smart Expense Tracker</Text>
+          <Text style={styles.footerVersion}>Version 1.0.0 · Final Project Edition</Text>
         </View>
-
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-            <MaterialIcons name="logout" size={20} color={colors.danger} />
-            <Text style={styles.signOutText}>Sign out</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.version}>Finora v1.0.0</Text>
       </ScrollView>
 
-      <Modal visible={showCurrency} transparent animationType="fade">
+      {/* Currency Selection Modal */}
+      <Modal visible={showCurrencyModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select currency</Text>
-            <ScrollView>
+            <Text style={styles.modalTitle}>Choose Currency</Text>
+            <View style={styles.currencyGrid}>
               {CURRENCIES.map((c) => (
                 <TouchableOpacity
                   key={c}
-                  style={styles.currencyOption}
-                  onPress={async () => {
-                    await updateProfile({ currency: c });
-                    setShowCurrency(false);
-                  }}
+                  style={[
+                    styles.currencyOption,
+                    profile?.currency === c && styles.currencyOptionSelected,
+                  ]}
+                  onPress={() => handleSelectCurrency(c)}
                 >
-                  <Text style={styles.currencyOptionText}>{c}</Text>
-                  {profile?.currency === c && (
-                    <MaterialIcons name="check" size={20} color={colors.brand} />
-                  )}
+                  <Text
+                    style={[
+                      styles.currencyOptionText,
+                      profile?.currency === c && styles.currencyOptionTextSelected,
+                    ]}
+                  >
+                    {c}
+                  </Text>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
-            <TouchableOpacity onPress={() => setShowCurrency(false)} style={styles.modalClose}>
-              <Text style={styles.modalCloseText}>Cancel</Text>
-            </TouchableOpacity>
+            </View>
+            <AppButton
+              title="Close"
+              variant="secondary"
+              onPress={() => setShowCurrencyModal(false)}
+            />
           </View>
         </View>
       </Modal>
 
-      <Modal visible={showPassword} transparent animationType="fade">
+      {/* Change Password Modal */}
+      <Modal visible={showPasswordModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Change password</Text>
+            <Text style={styles.modalTitle}>Change Password</Text>
             <AppInput
-              label="Current password"
+              label="Current Password"
               value={currentPassword}
               onChangeText={setCurrentPassword}
+              placeholder="Enter current password"
               secureTextEntry
             />
             <AppInput
-              label="New password"
+              label="New Password"
               value={newPassword}
               onChangeText={setNewPassword}
+              placeholder="At least 6 characters"
               secureTextEntry
             />
-            <AppButton title="Update Password" onPress={handleChangePassword} loading={passwordLoading} />
-            <TouchableOpacity onPress={() => setShowPassword(false)} style={styles.modalClose}>
-              <Text style={styles.modalCloseText}>Cancel</Text>
-            </TouchableOpacity>
+            <View style={styles.modalActions}>
+              <AppButton
+                title="Update Password"
+                onPress={handleChangePassword}
+                loading={passwordLoading}
+              />
+              <AppButton
+                title="Cancel"
+                variant="secondary"
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                }}
+              />
+            </View>
           </View>
         </View>
       </Modal>
@@ -207,14 +295,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
+    paddingTop: Platform.OS === 'ios' ? spacing.xxl : spacing.xl,
+    paddingBottom: spacing.xxxl * 2,
   },
   pageTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.ink,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   profileCard: {
     flexDirection: 'row',
@@ -223,6 +311,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.lg,
     marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
     ...shadows.card,
   },
   avatar: {
@@ -232,7 +322,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.lg,
+    marginRight: spacing.md,
   },
   avatarText: {
     fontSize: 22,
@@ -242,15 +332,20 @@ const styles = StyleSheet.create({
   profileInfo: {
     flex: 1,
   },
-  nameRow: {
+  nameDisplayRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.xs,
   },
-  name: {
-    fontSize: 18,
+  profileName: {
+    fontSize: 17,
     fontWeight: '700',
     color: colors.ink,
+  },
+  profileEmail: {
+    fontSize: 13,
+    color: colors.inkMuted,
+    marginTop: 2,
   },
   nameEditRow: {
     flexDirection: 'row',
@@ -261,76 +356,102 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.input,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 16,
-    color: colors.ink,
-    marginRight: spacing.sm,
-  },
-  email: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
     fontSize: 14,
+    color: colors.ink,
+    backgroundColor: colors.background,
+  },
+  iconActionBtn: {
+    padding: 6,
+  },
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.inkMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+    marginLeft: 4,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  settingIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  settingMiddle: {
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+  settingSub: {
+    fontSize: 12,
     color: colors.inkMuted,
     marginTop: 2,
   },
-  iconBtn: {
-    padding: spacing.xs,
-    marginLeft: spacing.xs,
-  },
-  section: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-    ...shadows.card,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.inkMuted,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  rowLabel: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.ink,
-    marginLeft: spacing.md,
-  },
-  rowValue: {
-    fontSize: 15,
-    color: colors.inkMuted,
-    marginRight: spacing.sm,
+  settingValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.brand,
+    marginRight: spacing.xs,
   },
   signOutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.expenseBg,
+    gap: spacing.sm,
   },
   signOutText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.danger,
-    marginLeft: spacing.md,
+    color: colors.expense,
+    fontSize: 16,
+    fontWeight: '700',
   },
-  version: {
-    fontSize: 13,
-    color: colors.inkFaint,
-    textAlign: 'center',
+  footer: {
+    alignItems: 'center',
     marginTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+    gap: 4,
+  },
+  footerBrand: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.ink,
+    marginTop: spacing.xs,
+  },
+  footerVersion: {
+    fontSize: 12,
+    color: colors.inkFaint,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     padding: spacing.xl,
   },
@@ -338,33 +459,43 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     padding: spacing.xl,
-    maxHeight: '70%',
+    gap: spacing.md,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.ink,
-    marginBottom: spacing.lg,
+  },
+  currencyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
   },
   currencyOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    justifyContent: 'center',
+  },
+  currencyOptionSelected: {
+    backgroundColor: colors.brand,
+    borderColor: colors.brand,
   },
   currencyOptionText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.ink,
   },
-  modalClose: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    marginTop: spacing.sm,
+  currencyOptionTextSelected: {
+    color: colors.white,
   },
-  modalCloseText: {
-    fontSize: 15,
-    color: colors.inkMuted,
+  modalActions: {
+    gap: spacing.sm,
   },
 });

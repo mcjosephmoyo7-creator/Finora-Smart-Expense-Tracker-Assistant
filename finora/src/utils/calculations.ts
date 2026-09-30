@@ -1,29 +1,51 @@
-import { Transaction, PeriodKey } from '../types';
+import { Transaction, PeriodKey, BudgetStatus } from '../types';
+
+export function parseTransactionDate(d: any): Date {
+  if (!d) return new Date();
+  if (d instanceof Date) return d;
+  if (typeof d.toDate === 'function') return d.toDate();
+  const parsed = new Date(d);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
 
 export function formatCurrency(amount: number, currency = '$'): string {
-  return `${currency}${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const safeAmount = isNaN(amount) ? 0 : amount;
+  return `${currency}${Math.abs(safeAmount).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export function calculateBalance(transactions: Transaction[]): number {
-  return transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
+  return transactions.reduce(
+    (sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount),
+    0
+  );
 }
 
 export function calculateIncome(transactions: Transaction[]): number {
-  return transactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  return transactions
+    .filter((t) => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
 }
 
 export function calculateExpenses(transactions: Transaction[]): number {
-  return transactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  return transactions
+    .filter((t) => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
 }
 
 export function calculateNet(transactions: Transaction[]): number {
   return calculateIncome(transactions) - calculateExpenses(transactions);
 }
 
-export function filterTransactionsByPeriod(transactions: Transaction[], period: PeriodKey | string): Transaction {
+export function filterTransactionsByPeriod(
+  transactions: Transaction[],
+  period: PeriodKey | string
+): Transaction[] {
   const now = new Date();
   return transactions.filter((t) => {
-    const d = new Date(t.date);
+    const d = parseTransactionDate(t.date);
     switch (period) {
       case 'today':
         return d.toDateString() === now.toDateString();
@@ -34,14 +56,17 @@ export function filterTransactionsByPeriod(transactions: Transaction[], period: 
       }
       case 'this_week': {
         const start = new Date(now);
-        start.setDate(start.getDate() - start.getDay());
+        const day = (now.getDay() + 6) % 7; // Monday start
+        start.setDate(start.getDate() - day);
+        start.setHours(0, 0, 0, 0);
         return d >= start;
       }
       case 'this_month':
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       case 'last_month': {
-        const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        return d.getMonth() === last.getMonth() && d.getFullYear() === last.getFullYear();
+        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const lastYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        return d.getMonth() === lastMonth && d.getFullYear() === lastYear;
       }
       case 'all_time':
       default:
@@ -50,21 +75,28 @@ export function filterTransactionsByPeriod(transactions: Transaction[], period: 
   });
 }
 
-export function getTransactionsByCategory(transactions: Transaction[], type: 'income' | 'expense'): { category: string; total: number; count: number }[] {
+export function getTransactionsByCategory(
+  transactions: Transaction[],
+  type: 'income' | 'expense'
+): { category: string; total: number; count: number }[] {
   const map: Record<string, { total: number; count: number }> = {};
   transactions
     .filter((t) => t.type === type)
     .forEach((t) => {
-      if (!map[t.category]) map[t.category] = { total: 0, count: 0 };
-      map[t.category].total += t.amount;
-      map[t.category].count += 1;
+      const cat = t.category || 'Other';
+      if (!map[cat]) map[cat] = { total: 0, count: 0 };
+      map[cat].total += t.amount;
+      map[cat].count += 1;
     });
-  return Object.entries(map).map(([category, data]) => ({ category, ...data }));
+  return Object.entries(map)
+    .map(([category, data]) => ({ category, ...data }))
+    .sort((a, b) => b.total - a.total);
 }
 
 export function getAverageDailySpend(transactions: Transaction[], days: number): number {
   const expenses = calculateExpenses(transactions);
-  return expenses / days;
+  const safeDays = Math.max(1, days);
+  return expenses / safeDays;
 }
 
 export function getBiggestExpense(transactions: Transaction[]): Transaction | null {
@@ -73,10 +105,13 @@ export function getBiggestExpense(transactions: Transaction[]): Transaction | nu
   return expenses.reduce((max, t) => (t.amount > max.amount ? t : max));
 }
 
-export function getTopCategory(transactions: Transaction[], type: 'income' | 'expense'): { category: string; total: number; count: number } | null {
+export function getTopCategory(
+  transactions: Transaction[],
+  type: 'income' | 'expense'
+): { category: string; total: number; count: number } | null {
   const byCat = getTransactionsByCategory(transactions, type);
   if (byCat.length === 0) return null;
-  return byCat.reduce((top, c) => (c.total > top.total ? c : top));
+  return byCat[0];
 }
 
 export function getMonthOverMonthChange(thisMonth: number, lastMonth: number): number {
@@ -84,15 +119,23 @@ export function getMonthOverMonthChange(thisMonth: number, lastMonth: number): n
   return Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
 }
 
-export function getBudgetStatus(transactions: Transaction[], monthlyBudget: number): { spent: number; remaining: number; percent: number; status: 'none' | 'on-track' | 'warning' | 'over' } {
+export function getBudgetStatus(
+  transactions: Transaction[],
+  monthlyBudget: number
+): BudgetStatus {
   const now = new Date();
-  const thisMonth = transactions.filter((t) => {
-    const d = new Date(t.date);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && t.type === 'expense';
+  const thisMonthExpenses = transactions.filter((t) => {
+    const d = parseTransactionDate(t.date);
+    return (
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear() &&
+      t.type === 'expense'
+    );
   });
-  const spent = thisMonth.reduce((s, t) => s + t.amount, 0);
+  const spent = thisMonthExpenses.reduce((s, t) => s + t.amount, 0);
   const remaining = monthlyBudget - spent;
   const percent = monthlyBudget > 0 ? Math.round((spent / monthlyBudget) * 100) : 0;
+
   let status: 'none' | 'on-track' | 'warning' | 'over' = 'none';
   if (monthlyBudget > 0) {
     if (percent >= 100) status = 'over';
@@ -105,7 +148,7 @@ export function getBudgetStatus(transactions: Transaction[], monthlyBudget: numb
 export function getDailySafeToSpend(transactions: Transaction[], monthlyBudget: number): number {
   const { remaining } = getBudgetStatus(transactions, monthlyBudget);
   const now = new Date();
-  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
-  if (daysLeft <= 0) return 0;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = Math.max(1, lastDay - now.getDate() + 1);
   return Math.max(0, remaining / daysLeft);
 }

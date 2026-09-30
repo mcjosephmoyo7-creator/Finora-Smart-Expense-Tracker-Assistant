@@ -8,38 +8,39 @@ import {
   Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFonts } from 'expo-font';
-import { MaterialIcons as MaterialIconsFont } from '@expo/vector-icons';
 import { colors, spacing, radius } from '../utils/theme';
+import { IconName } from '../types';
 import AppButton from '../components/AppButton';
+import FinoraLogo from '../components/FinoraLogo';
 
 const { width } = Dimensions.get('window');
 
 interface Slide {
   title: string;
   description: string;
-  icon: string;
+  icon: IconName;
   color: string;
 }
 
 const slides: Slide[] = [
   {
     title: 'Track every dollar',
-    description: 'Log income and expenses in seconds. See exactly where your money goes.',
+    description: 'Log your income and expenses in seconds. Always know where your money goes.',
     icon: 'account-balance-wallet',
     color: colors.brand,
   },
   {
     title: 'Stay within budget',
-    description: 'Set monthly limits and get real-time progress so you never overspend.',
+    description: 'Set custom monthly and category limits. Get proactive alerts before you overspend.',
     icon: 'savings',
     color: colors.income,
   },
   {
     title: 'Ask your assistant',
-    description: 'Get instant answers about your spending, budgets, and trends.',
+    description: 'A smart assistant that reads your live transactions and gives plain-English answers.',
     icon: 'chat',
     color: colors.amber,
   },
@@ -47,7 +48,7 @@ const slides: Slide[] = [
 
 export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const [current, setCurrent] = useState(0);
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -55,14 +56,21 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
     setCurrent(index);
   };
 
-  const goToNext = () => {
+  const handleNext = () => {
     if (current < slides.length - 1) {
       scrollRef.current?.scrollTo({ x: (current + 1) * width, animated: true });
+    } else {
+      navigation.navigate('SignUp');
     }
   };
 
   return (
     <View style={styles.container}>
+      {/* Brand Header */}
+      <View style={styles.topBar}>
+        <FinoraLogo size={42} showWordmark />
+      </View>
+
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -74,7 +82,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
         {slides.map((slide, index) => (
           <View key={`slide-${index}`} style={styles.slide}>
             <View style={[styles.iconContainer, { backgroundColor: slide.color + '15' }]}>
-              <MaterialIcons name={slide.icon} size={80} color={slide.color} />
+              <MaterialIcons name={slide.icon} size={72} color={slide.color} />
             </View>
             <Text style={styles.title}>{slide.title}</Text>
             <Text style={styles.description}>{slide.description}</Text>
@@ -82,6 +90,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
         ))}
       </ScrollView>
 
+      {/* Slide Dots Indicator */}
       <View style={styles.dots}>
         {slides.map((_, index) => (
           <View
@@ -91,22 +100,19 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
         ))}
       </View>
 
+      {/* Buttons */}
       <View style={styles.buttons}>
-        {current < slides.length - 1 ? (
-          <>
-            <AppButton title="Get Started" onPress={() => navigation.navigate('SignUp')} />
-            <TouchableOpacity onPress={() => navigation.navigate('SignIn')} style={styles.linkButton}>
-              <Text style={styles.linkText}>I already have an account</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <AppButton title="Get Started" onPress={goToNext} />
-            <TouchableOpacity onPress={() => navigation.navigate('SignIn')} style={styles.linkButton}>
-              <Text style={styles.linkText}>I already have an account</Text>
-            </TouchableOpacity>
-          </>
-        )}
+        <AppButton
+          title={current === slides.length - 1 ? 'Get Started' : 'Next'}
+          onPress={handleNext}
+        />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('SignIn')}
+          style={styles.linkButton}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.linkText}>I already have an account</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -117,6 +123,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  topBar: {
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? spacing.xxl + 10 : spacing.xl,
+    paddingBottom: spacing.sm,
+  },
   scrollView: {
     flex: 1,
   },
@@ -124,57 +135,59 @@ const styles = StyleSheet.create({
     width,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.xl,
   },
   iconContainer: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xxl,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: colors.ink,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   description: {
     fontSize: 16,
+    lineHeight: 24,
     color: colors.inkMuted,
     textAlign: 'center',
-    lineHeight: 24,
+    paddingHorizontal: spacing.lg,
   },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.xl,
+    gap: spacing.xs,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.border,
-    marginHorizontal: 4,
   },
   dotActive: {
-    backgroundColor: colors.brand,
     width: 24,
+    backgroundColor: colors.brand,
   },
   buttons: {
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.xl,
+    gap: spacing.sm,
   },
   linkButton: {
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   linkText: {
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.brand,
-    fontWeight: '500',
   },
 });

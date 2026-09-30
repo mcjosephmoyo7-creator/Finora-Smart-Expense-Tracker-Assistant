@@ -8,8 +8,8 @@ export function useTransactions(period: PeriodKey = 'all_time'): {
   allTransactions: Transaction[];
   loading: boolean;
   error: string | null;
-  addTransaction: (data: Omit<Transaction, 'id'>) => Promise<string>;
-  updateTransaction: (id: string, data: Partial<Transaction>) => Promise<void>;
+  addTransaction: (data: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  updateTransaction: (id: string, data: Partial<Omit<Transaction, 'id'>>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
 } {
   const { transactions, loading, error, addTransaction, updateTransaction, deleteTransaction } =

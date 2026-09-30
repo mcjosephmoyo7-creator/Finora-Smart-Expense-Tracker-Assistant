@@ -28,7 +28,9 @@ export function useMonthStats(): {
     const expenses = calculateExpenses(thisMonth);
     const net = calculateNet(thisMonth);
     const count = thisMonth.length;
-    const avgDailySpend = getAverageDailySpend(thisMonth, 30);
+    const now = new Date();
+    const daysPassed = Math.max(1, now.getDate());
+    const avgDailySpend = getAverageDailySpend(thisMonth, daysPassed);
 
     const lastMonthExpenses = calculateExpenses(lastMonth);
     const momChange = getMonthOverMonthChange(expenses, lastMonthExpenses);

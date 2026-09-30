@@ -6,18 +6,25 @@ import {
   SectionList,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTransactions } from '../context/TransactionContext';
-import { colors, spacing, radius } from '../utils/theme';
-import { formatCurrency, calculateNet, filterTransactionsByPeriod } from '../utils/calculations';
-import { getSectionLabel, isSameDay } from '../utils/dateHelpers';
+import { colors, spacing, radius, shadows } from '../utils/theme';
+import {
+  formatCurrency,
+  calculateNet,
+  filterTransactionsByPeriod,
+  parseTransactionDate,
+} from '../utils/calculations';
+import { getSectionLabel } from '../utils/dateHelpers';
 import { ALL_CATEGORIES } from '../utils/categories';
 import TransactionRow from '../components/TransactionRow';
 import FilterChip from '../components/FilterChip';
 import EmptyState from '../components/EmptyState';
+import { Transaction } from '../types';
 
 const PERIODS = [
   { key: 'this_month', label: 'This month' },
@@ -27,11 +34,11 @@ const PERIODS = [
 
 export default function ActivityScreen({ navigation }: { navigation: any }) {
   const { profile } = useAuth();
-  const { transactions, deleteTransaction } = useTransactions();
+  const { transactions } = useTransactions();
 
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState(null);
-  const [categoryFilter, setCategoryFilter] = useState(null);
+  const [typeFilter, setTypeFilter] = useState<'income' | 'expense' | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [period, setPeriod] = useState('this_month');
 
   const currency = profile?.currency || '$';
@@ -42,25 +49,32 @@ export default function ActivityScreen({ navigation }: { navigation: any }) {
       result = result.filter((t) => t.type === typeFilter);
     }
     if (categoryFilter) {
-      result = result.filter((t) => t.category === categoryFilter);
+      result = result.filter(
+        (t) => t.category === categoryFilter || t.category.toLowerCase() === categoryFilter.toLowerCase()
+      );
     }
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
-        (t) => t.title.toLowerCase().includes(q) || (t.note && t.note.toLowerCase().includes(q))
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          (t.note && t.note.toLowerCase().includes(q))
       );
     }
     return result;
   }, [transactions, period, typeFilter, categoryFilter, search]);
 
   const sections = useMemo(() => {
-    const grouped = {};
+    const grouped: Record<string, Transaction[]> = {};
     filtered.forEach((tx) => {
       const label = getSectionLabel(tx.date);
       if (!grouped[label]) grouped[label] = [];
       grouped[label].push(tx);
     });
-    return Object.entries(grouped).map(([title, data]) => ({ title, data }));
+    return Object.entries(grouped).map(([title, data]) => ({
+      title,
+      data,
+    }));
   }, [filtered]);
 
   const net = useMemo(() => calculateNet(filtered), [filtered]);
@@ -72,65 +86,97 @@ export default function ActivityScreen({ navigation }: { navigation: any }) {
     setPeriod('this_month');
   };
 
-  const handleDelete = (tx) => {
-    Alert.alert('Delete transaction', `"${tx.title}" will be removed.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteTransaction(tx.id) },
-    ]);
-  };
+  const hasActiveFilters = search.trim() !== '' || typeFilter !== null || categoryFilter !== null || period !== 'this_month';
 
   return (
     <View style={styles.container}>
+      {/* Search Input */}
       <View style={styles.searchContainer}>
-        <MaterialIcons name="search" size={20} color={colors.inkFaint} />
+        <MaterialIcons name="search" size={22} color={colors.inkFaint} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search transactions..."
+          placeholder="Search by title or note..."
           placeholderTextColor={colors.inkFaint}
           value={search}
           onChangeText={setSearch}
         />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')}>
+            <MaterialIcons name="cancel" size={18} color={colors.inkFaint} />
+          </TouchableOpacity>
+        )}
       </View>
 
-      <View style={styles.filterRow}>
-        <FilterChip label="All" selected={!typeFilter} onPress={() => setTypeFilter(null)} />
-        <FilterChip label="Income" selected={typeFilter === 'income'} onPress={() => setTypeFilter('income')} />
-        <FilterChip label="Expense" selected={typeFilter === 'expense'} onPress={() => setTypeFilter('expense')} />
-      </View>
+      {/* Filter Row 1: Type & Period */}
+      <View style={styles.filtersWrapper}>
+        <View style={styles.filterRow}>
+          <FilterChip label="All Types" selected={typeFilter === null} onPress={() => setTypeFilter(null)} />
+          <FilterChip label="Income" selected={typeFilter === 'income'} onPress={() => setTypeFilter('income')} />
+          <FilterChip label="Expense" selected={typeFilter === 'expense'} onPress={() => setTypeFilter('expense')} />
+        </View>
 
-      <View style={styles.filterRow}>
-        <FilterChip label="All categories" selected={!categoryFilter} onPress={() => setCategoryFilter(null)} />
-        {ALL_CATEGORIES.slice(0, 6).map((cat) => (
+        <View style={styles.filterRow}>
+          {PERIODS.map((p) => (
+            <FilterChip
+              key={p.key}
+              label={p.label}
+              selected={period === p.key}
+              onPress={() => setPeriod(p.key)}
+            />
+          ))}
+        </View>
+
+        {/* Filter Row 2: Categories Scroll */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScroll}
+        >
           <FilterChip
-            key={cat.id}
-            label={cat.label}
-            selected={categoryFilter === cat.id}
-            onPress={() => setCategoryFilter(cat.id)}
+            label="All Categories"
+            selected={categoryFilter === null}
+            onPress={() => setCategoryFilter(null)}
           />
-        ))}
+          {ALL_CATEGORIES.map((cat) => (
+            <FilterChip
+              key={cat.id}
+              label={cat.label}
+              selected={categoryFilter === cat.id}
+              onPress={() => setCategoryFilter(cat.id)}
+            />
+          ))}
+        </ScrollView>
       </View>
 
-      <View style={styles.filterRow}>
-        {PERIODS.map((p) => (
-          <FilterChip
-            key={p.key}
-            label={p.label}
-            selected={period === p.key}
-            onPress={() => setPeriod(p.key)}
-          />
-        ))}
+      {/* Summary Row */}
+      <View style={styles.summaryBar}>
+        <Text style={styles.summaryCount}>
+          {filtered.length} transaction{filtered.length !== 1 ? 's' : ''}
+        </Text>
+        <Text
+          style={[
+            styles.summaryNet,
+            { color: net >= 0 ? colors.income : colors.expense },
+          ]}
+        >
+          Net: {net >= 0 ? '+' : '-'}{formatCurrency(net, currency)}
+        </Text>
       </View>
-
-      <Text style={styles.summary}>
-        {filtered.length} result{filtered.length !== 1 ? 's' : ''} · Net {net >= 0 ? '+' : ''}{formatCurrency(net, currency)}
-      </Text>
 
       {filtered.length === 0 ? (
-        <EmptyState
-          icon="search-off"
-          message="Nothing matches your filters."
-          subMessage="Try adjusting your search or filters."
-        />
+        <View style={styles.emptyContainer}>
+          <EmptyState
+            icon="search-off"
+            message="No matching transactions found"
+            subMessage="Try adjusting your search query or clearing some filters."
+          />
+          {hasActiveFilters && (
+            <TouchableOpacity onPress={clearFilters} style={styles.clearBtn} activeOpacity={0.8}>
+              <MaterialIcons name="clear-all" size={18} color={colors.white} />
+              <Text style={styles.clearBtnText}>Reset All Filters</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       ) : (
         <SectionList
           sections={sections}
@@ -147,6 +193,7 @@ export default function ActivityScreen({ navigation }: { navigation: any }) {
           )}
           contentContainerStyle={styles.listContent}
           stickySectionHeadersEnabled={false}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </View>
@@ -162,10 +209,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: radius.input,
+    borderRadius: radius.card,
     marginHorizontal: spacing.lg,
-    marginTop: spacing.lg,
+    marginTop: Platform.OS === 'ios' ? spacing.xxl : spacing.lg,
     paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card,
   },
   searchInput: {
     flex: 1,
@@ -174,29 +224,71 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.ink,
   },
+  filtersWrapper: {
+    marginTop: spacing.sm,
+  },
   filterRow: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
-    marginTop: spacing.sm,
+    marginTop: 6,
     flexWrap: 'wrap',
+    gap: spacing.xs,
   },
-  summary: {
-    fontSize: 13,
-    color: colors.inkMuted,
+  categoryScroll: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: 6,
+    gap: spacing.xs,
   },
-  sectionHeader: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.inkMuted,
+  summaryBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.background,
+  },
+  summaryCount: {
+    fontSize: 13,
+    color: colors.inkMuted,
+    fontWeight: '500',
+  },
+  summaryNet: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   listContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 110,
+  },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.inkMuted,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.background,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 80,
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.brand,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.chip,
+    marginTop: spacing.md,
+    gap: 6,
+  },
+  clearBtnText: {
+    color: colors.white,
+    fontWeight: '600',
+    fontSize: 13,
   },
 });
