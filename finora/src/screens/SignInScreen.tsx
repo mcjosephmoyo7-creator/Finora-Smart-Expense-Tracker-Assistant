@@ -10,18 +10,24 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { auth } from '../firebase';
 import { colors, spacing, radius } from '../utils/theme';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
 import FinoraLogo from '../components/FinoraLogo';
 
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_FIREBASE_WEB_CLIENT_ID,
+});
+
 export default function SignInScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
 
@@ -65,6 +71,28 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
       setResetSent(true);
     } catch (err: any) {
       setError('Could not send password reset email. Check email address.');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      if (response.type !== 'success') {
+        return; // User cancelled — no error to show.
+      }
+      const idToken = response.data.idToken;
+      if (!idToken) {
+        throw new Error('No ID token received from Google.');
+      }
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+      await signInWithCredential(auth, googleCredential);
+    } catch (err: any) {
+      setError(err?.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -158,8 +186,28 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
             title="Sign In"
             onPress={handleSignIn}
             loading={loading}
-            disabled={loading}
+            disabled={loading || googleLoading}
           />
+
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Continue with Google */}
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleSignIn}
+            disabled={loading || googleLoading}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="account-circle" size={22} color={colors.ink} />
+            <Text style={styles.googleButtonText}>
+              {googleLoading ? 'Signing in…' : 'Continue with Google'}
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Don't have an account? </Text>
@@ -257,6 +305,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     flex: 1,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: spacing.md,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.inkFaint,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.ink,
   },
   footerRow: {
     flexDirection: 'row',

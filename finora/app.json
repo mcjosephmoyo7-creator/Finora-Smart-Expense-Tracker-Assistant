@@ -16,14 +16,16 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.finora.app"
+      "bundleIdentifier": "com.finora.app",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0E5A4A"
       },
-      "package": "com.finora.app"
+      "package": "com.finora.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,7 +33,8 @@
     "plugins": [
       "expo-font",
       "expo-splash-screen",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {
