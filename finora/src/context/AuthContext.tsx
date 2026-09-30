@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Profile } from '../types';
@@ -34,9 +34,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (profileDoc.exists()) {
-            setProfile(profileDoc.data());
+            const data = profileDoc.data();
+            setProfile({
+              name: data.name || firebaseUser.displayName || '',
+              email: data.email || firebaseUser.email || '',
+              currency: data.currency || '$',
+              monthlyBudget: Number(data.monthlyBudget) || 0,
+              categoryLimits: data.categoryLimits || {},
+              createdAt: data.createdAt,
+            });
           } else {
-            const newProfile = {
+            const newProfile: Profile = {
               name: firebaseUser.displayName || '',
               email: firebaseUser.email || '',
               currency: '$',
@@ -52,8 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
       } else {
-        setUser(null);
-        setProfile(null);
+        // No signed-in user: skip the login screen and enter the app
+        // automatically with an anonymous account.
+        setLoading(true);
+        signInAnonymously(auth).catch((error) => {
+            console.error(
+              'Anonymous sign-in failed. Enable Anonymous auth in Firebase Console (Authentication > Sign-in method).',
+              error
+            );
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+          });
+        return;
       }
       setLoading(false);
     });
@@ -65,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     try {
       await setDoc(doc(db, 'users', user.uid), updates, { merge: true });
-      setProfile((prev) => ({ ...prev, ...updates }));
+      setProfile((prev) => (prev ? { ...prev, ...updates } : null));
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
