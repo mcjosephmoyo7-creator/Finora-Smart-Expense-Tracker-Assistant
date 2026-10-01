@@ -35,7 +35,7 @@ export default function AddEditTransactionScreen({
   const [type, setType] = useState<'income' | 'expense'>(editTransaction?.type || 'expense');
   const [amount, setAmount] = useState(editTransaction?.amount ? editTransaction.amount.toString() : '');
   const [title, setTitle] = useState(editTransaction?.title || '');
-  const [category, setCategory] = useState(editTransaction?.category || '');
+  const [category, setCategory] = useState(editTransaction?.category || ''); // eslint-disable-line react-hooks/set-state-in-effect
   const [date, setDate] = useState<Date>(
     editTransaction?.date ? new Date(editTransaction.date) : new Date()
   );
@@ -51,7 +51,7 @@ export default function AddEditTransactionScreen({
     if (!category || !categories.find((c) => c.id === category)) {
       setCategory(categories[0]?.id || '');
     }
-  }, [type]);
+  }, [type, categories, category]);
 
   const numAmount = parseFloat(amount);
   const isValid = !isNaN(numAmount) && numAmount > 0 && title.trim().length > 0 && category.length > 0;

@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.finora.app",
+      "bundleIdentifier": "com.finora.finorasmartexpensetracker",
       "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
@@ -24,7 +24,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0E5A4A"
       },
-      "package": "com.finora.app",
+      "package": "com.finora.finorasmartexpensetracker",
       "googleServicesFile": "./google-services.json"
     },
     "web": {

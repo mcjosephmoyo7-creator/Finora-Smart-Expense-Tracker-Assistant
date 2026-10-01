@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import {
   View,
   Text,
@@ -49,7 +49,7 @@ export default function AssistantScreen() {
     const question = (presetText || input).trim();
     if (!question) return;
 
-    const userMsg: Message = { id: Date.now().toString(), text: question, isUser: true };
+    const userMsg: Message = { id: `user-${useId()}-${messages.length}`, text: question, isUser: true };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setTyping(true);

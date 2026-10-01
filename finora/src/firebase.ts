@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyBUMGG58uWySFO9QUhCgoV-ucnsHfp17Hc",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyD1wAdi4O2kL8PWIGvB7ZROGbVcZ03TJAY",
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "finora-smart-expense-tracker.firebaseapp.com",
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "finora-smart-expense-tracker",
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "finora-smart-expense-tracker.firebasestorage.app",
@@ -30,3 +30,4 @@ try {
 
 export { auth, app };
 export const db = getFirestore(app);
+

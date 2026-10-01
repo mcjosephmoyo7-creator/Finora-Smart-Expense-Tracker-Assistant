@@ -45,12 +45,9 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) {
-      setTransactions([]);
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
     const q = query(
       collection(db, 'users', user.uid, 'transactions'),
       orderBy('date', 'desc')

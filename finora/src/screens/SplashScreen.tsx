@@ -1,21 +1,19 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Animated, Easing, StyleSheet } from 'react-native';
 
 const BRAND = '#0E5A4A';
-const BAR_TARGETS = [22, 38, 56]; // bar heights, like a rising chart
+const BAR_TARGETS = [22, 38, 56];
 
 export default function SplashScreen({ onFinish }: { onFinish?: () => void }) {
-  const tile = useRef(new Animated.Value(0)).current;
-  const bars = useRef(BAR_TARGETS.map(() => new Animated.Value(0))).current;
-  const word = useRef(new Animated.Value(0)).current;
-  const tagline = useRef(new Animated.Value(0)).current;
-  const screen = useRef(new Animated.Value(1)).current;
+  const tile = useMemo(() => new Animated.Value(0), []);
+  const bars = useMemo(() => BAR_TARGETS.map(() => new Animated.Value(0)), []);
+  const word = useMemo(() => new Animated.Value(0), []);
+  const tagline = useMemo(() => new Animated.Value(0), []);
+  const screen = useMemo(() => new Animated.Value(1), []);
 
   useEffect(() => {
     Animated.sequence([
-      // 1. the tile pops in
       Animated.spring(tile, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }),
-      // 2. bars grow one after another
       Animated.stagger(
         140,
         bars.map((b) =>
@@ -23,16 +21,13 @@ export default function SplashScreen({ onFinish }: { onFinish?: () => void }) {
             toValue: 1,
             duration: 420,
             easing: Easing.out(Easing.back(1.4)),
-            useNativeDriver: false, // height can't use the native driver
+            useNativeDriver: false,
           })
         )
       ),
-      // 3. wordmark slides up
       Animated.timing(word, { toValue: 1, duration: 450, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      // 4. tagline fades in
       Animated.timing(tagline, { toValue: 1, duration: 350, useNativeDriver: true }),
       Animated.delay(700),
-      // 5. fade out
       Animated.timing(screen, { toValue: 0, duration: 350, useNativeDriver: true }),
     ]).start(() => onFinish && onFinish());
   }, []);
