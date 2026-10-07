@@ -26,6 +26,7 @@ import TransactionRow from '../components/TransactionRow';
 import BudgetProgressBar from '../components/BudgetProgressBar';
 import EmptyState from '../components/EmptyState';
 import FinoraLogo from '../components/FinoraLogo';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
   const { profile } = useAuth();
@@ -50,7 +51,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen edges={['top', 'right', 'left']} style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -199,7 +200,7 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
       >
         <MaterialIcons name="add" size={30} color={colors.white} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaScreen>
   );
 }
 

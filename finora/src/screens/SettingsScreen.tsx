@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
@@ -18,10 +19,13 @@ import { colors, spacing, radius, shadows } from '../utils/theme';
 import AppButton from '../components/AppButton';
 import AppInput from '../components/AppInput';
 import FinoraLogo from '../components/FinoraLogo';
+import SafeAreaScreen from '../components/SafeAreaScreen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CURRENCIES = ['$', '€', '£', '¥', '₹', '₦', 'R', 'A$', 'C$', 'CHF'];
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const { user, profile, updateProfile } = useAuth();
 
   const [editingName, setEditingName] = useState(false);
@@ -94,7 +98,11 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen edges={['top', 'right', 'left']} style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -213,7 +221,15 @@ export default function SettingsScreen() {
 
       {/* Currency Selection Modal */}
       <Modal visible={showCurrencyModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <View
+          style={[
+            styles.modalOverlay,
+            {
+              paddingTop: spacing.xl + insets.top,
+              paddingBottom: spacing.xl + insets.bottom,
+            },
+          ]}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Choose Currency</Text>
             <View style={styles.currencyGrid}>
@@ -248,43 +264,63 @@ export default function SettingsScreen() {
 
       {/* Change Password Modal */}
       <Modal visible={showPasswordModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Change Password</Text>
-            <AppInput
-              label="Current Password"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="Enter current password"
-              secureTextEntry
-            />
-            <AppInput
-              label="New Password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="At least 6 characters"
-              secureTextEntry
-            />
-            <View style={styles.modalActions}>
-              <AppButton
-                title="Update Password"
-                onPress={handleChangePassword}
-                loading={passwordLoading}
-              />
-              <AppButton
-                title="Cancel"
-                variant="secondary"
-                onPress={() => {
-                  setShowPasswordModal(false);
-                  setCurrentPassword('');
-                  setNewPassword('');
-                }}
-              />
-            </View>
+        <KeyboardAvoidingView
+          style={styles.modalKeyboardArea}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View
+            style={[
+              styles.modalOverlay,
+              {
+                paddingTop: spacing.xl + insets.top,
+                paddingBottom: spacing.xl + insets.bottom,
+              },
+            ]}
+          >
+            <ScrollView
+              contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Change Password</Text>
+                <AppInput
+                  label="Current Password"
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholder="Enter current password"
+                  secureTextEntry
+                />
+                <AppInput
+                  label="New Password"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="At least 6 characters"
+                  secureTextEntry
+                />
+                <View style={styles.modalActions}>
+                  <AppButton
+                    title="Update Password"
+                    onPress={handleChangePassword}
+                    loading={passwordLoading}
+                  />
+                  <AppButton
+                    title="Cancel"
+                    variant="secondary"
+                    onPress={() => {
+                      setShowPasswordModal(false);
+                      setCurrentPassword('');
+                      setNewPassword('');
+                    }}
+                  />
+                </View>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-    </View>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 
@@ -454,6 +490,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     padding: spacing.xl,
+  },
+  modalKeyboardArea: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   modalContent: {
     backgroundColor: colors.surface,

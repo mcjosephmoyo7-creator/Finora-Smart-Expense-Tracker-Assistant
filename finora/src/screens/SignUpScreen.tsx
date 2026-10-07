@@ -16,6 +16,7 @@ import { colors, spacing, radius } from '../utils/theme';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
 import FinoraLogo from '../components/FinoraLogo';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 const CURRENCIES = ['$', '€', '£', '¥', '₹', '₦', 'R', 'A$', 'C$', 'CHF'];
 
@@ -85,10 +86,11 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <SafeAreaScreen style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -211,7 +213,8 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

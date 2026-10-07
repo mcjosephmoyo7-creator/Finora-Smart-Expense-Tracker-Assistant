@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +26,7 @@ import TransactionRow from '../components/TransactionRow';
 import FilterChip from '../components/FilterChip';
 import EmptyState from '../components/EmptyState';
 import { Transaction } from '../types';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 const PERIODS = [
   { key: 'this_month', label: 'This month' },
@@ -89,7 +91,11 @@ export default function ActivityScreen({ navigation }: { navigation: any }) {
   const hasActiveFilters = search.trim() !== '' || typeFilter !== null || categoryFilter !== null || period !== 'this_month';
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen edges={['top', 'right', 'left']} style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       {/* Search Input */}
       <View style={styles.searchContainer}>
         <MaterialIcons name="search" size={22} color={colors.inkFaint} />
@@ -196,7 +202,8 @@ export default function ActivityScreen({ navigation }: { navigation: any }) {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </View>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

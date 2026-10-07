@@ -16,6 +16,7 @@ import { colors, spacing, radius } from '../utils/theme';
 import { getReply, SUGGESTIONS } from '../utils/assistantEngine';
 import ChatBubble from '../components/ChatBubble';
 import FinoraLogo from '../components/FinoraLogo';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 interface Message {
   id: string;
@@ -71,11 +72,11 @@ export default function AssistantScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <SafeAreaScreen edges={['top', 'right', 'left']} style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <View style={styles.header}>
         <View style={styles.headerBrand}>
           <FinoraLogo size={32} />
@@ -156,7 +157,8 @@ export default function AssistantScreen() {
           <MaterialIcons name="arrow-upward" size={22} color={colors.white} />
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

@@ -1,0 +1,15 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "finora"
+  ],
+  "ignorePaths": [
+    "node_modules",
+    "finora/node_modules",
+    "src/dataconnect-generated",
+    ".expo",
+    ".firebase",
+    "package-lock.json"
+  ]
+}

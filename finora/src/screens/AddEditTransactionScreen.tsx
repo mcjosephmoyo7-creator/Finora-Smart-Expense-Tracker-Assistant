@@ -20,6 +20,7 @@ import AppButton from '../components/AppButton';
 import AppInput from '../components/AppInput';
 import CategoryChip from '../components/CategoryChip';
 import { Transaction } from '../types';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 export default function AddEditTransactionScreen({
   navigation,
@@ -110,10 +111,11 @@ export default function AddEditTransactionScreen({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <SafeAreaScreen style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -254,7 +256,8 @@ export default function AddEditTransactionScreen({
           )}
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

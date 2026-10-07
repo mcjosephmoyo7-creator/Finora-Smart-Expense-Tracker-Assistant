@@ -5,7 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
   Platform,
@@ -15,8 +15,7 @@ import { colors, spacing, radius } from '../utils/theme';
 import { IconName } from '../types';
 import AppButton from '../components/AppButton';
 import FinoraLogo from '../components/FinoraLogo';
-
-const { width } = Dimensions.get('window');
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 interface Slide {
   title: string;
@@ -49,6 +48,7 @@ const slides: Slide[] = [
 export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const [current, setCurrent] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const { width } = useWindowDimensions();
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -65,7 +65,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen style={styles.container}>
       {/* Brand Header */}
       <View style={styles.topBar}>
         <FinoraLogo size={42} showWordmark />
@@ -80,7 +80,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
         style={styles.scrollView}
       >
         {slides.map((slide, index) => (
-          <View key={`slide-${index}`} style={styles.slide}>
+          <View key={`slide-${index}`} style={[styles.slide, { width }]}>
             <View style={[styles.iconContainer, { backgroundColor: slide.color + '15' }]}>
               <MaterialIcons name={slide.icon} size={72} color={slide.color} />
             </View>
@@ -114,7 +114,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
           <Text style={styles.linkText}>I already have an account</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaScreen>
   );
 }
 
@@ -132,7 +132,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   slide: {
-    width,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,

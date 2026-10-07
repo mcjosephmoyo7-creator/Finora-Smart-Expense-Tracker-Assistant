@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import React, { useEffect, useState, useCallback } from 'react';
 import { View } from 'react-native';
 import * as SplashScreenNative from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { MaterialIcons } from '@expo/vector-icons';
 import {
@@ -42,6 +43,7 @@ export default function App() {
         <AuthProvider>
           <TransactionProvider>
             <View style={{ flex: 1 }}>
+              <StatusBar style={showSplash ? 'light' : 'dark'} />
               <NavigationContainer>
                 <RootNavigator />
               </NavigationContainer>

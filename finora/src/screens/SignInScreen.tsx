@@ -15,6 +15,7 @@ import { colors, spacing, radius } from '../utils/theme';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
 import FinoraLogo from '../components/FinoraLogo';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 export default function SignInScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
@@ -68,10 +69,11 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <SafeAreaScreen style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -168,7 +170,8 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

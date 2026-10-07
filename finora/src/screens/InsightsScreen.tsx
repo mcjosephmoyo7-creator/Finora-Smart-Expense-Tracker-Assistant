@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Dimensions,
   Platform,
 } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
@@ -27,8 +26,7 @@ import {
 import StatCard from '../components/StatCard';
 import FilterChip from '../components/FilterChip';
 import EmptyState from '../components/EmptyState';
-
-const { width } = Dimensions.get('window');
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 const PERIODS = [
   { key: 'this_month', label: 'This month' },
@@ -82,7 +80,7 @@ export default function InsightsScreen() {
   }, [byCategory, expenses]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen edges={['top', 'right', 'left']} style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -242,7 +240,7 @@ export default function InsightsScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaScreen>
   );
 }
 

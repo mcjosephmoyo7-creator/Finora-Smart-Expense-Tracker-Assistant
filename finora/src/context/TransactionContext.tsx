@@ -45,6 +45,10 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) {
+      // Signed out — clear data so a different account never sees stale state
+      setTransactions([]);
+      setError(null);
+      setLoading(true);
       return;
     }
 

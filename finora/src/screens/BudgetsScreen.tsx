@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +20,7 @@ import { getDaysLeftInMonth } from '../utils/dateHelpers';
 import { EXPENSE_CATEGORIES } from '../utils/categories';
 import AppButton from '../components/AppButton';
 import BudgetProgressBar from '../components/BudgetProgressBar';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 export default function BudgetsScreen({ navigation }: { navigation: any }) {
   const { profile, updateProfile } = useAuth();
@@ -95,20 +97,28 @@ export default function BudgetsScreen({ navigation }: { navigation: any }) {
       : `You're on track (${budgetStatus.percent}% spent)`;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={styles.backBtn}
-        >
-          <MaterialIcons name="arrow-back" size={24} color={colors.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Monthly Budgets</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <SafeAreaScreen style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.backBtn}
+          >
+            <MaterialIcons name="arrow-back" size={24} color={colors.ink} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Monthly Budgets</Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Set / Change Monthly Budget Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Set Monthly Spending Limit</Text>
@@ -286,7 +296,8 @@ export default function BudgetsScreen({ navigation }: { navigation: any }) {
           })}
         </View>
       </ScrollView>
-    </View>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

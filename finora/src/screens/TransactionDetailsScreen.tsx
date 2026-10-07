@@ -16,6 +16,7 @@ import { getCategoryById } from '../utils/categories';
 import { formatCurrency } from '../utils/calculations';
 import { formatDate } from '../utils/dateHelpers';
 import AppButton from '../components/AppButton';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 export default function TransactionDetailsScreen({
   navigation,
@@ -32,7 +33,7 @@ export default function TransactionDetailsScreen({
 
   if (!transaction) {
     return (
-      <View style={styles.container}>
+      <SafeAreaScreen style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <MaterialIcons name="arrow-back" size={24} color={colors.ink} />
@@ -48,7 +49,7 @@ export default function TransactionDetailsScreen({
           </Text>
           <AppButton title="Return to Activity" onPress={() => navigation.goBack()} />
         </View>
-      </View>
+      </SafeAreaScreen>
     );
   }
 
@@ -85,7 +86,7 @@ export default function TransactionDetailsScreen({
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -183,7 +184,7 @@ export default function TransactionDetailsScreen({
           <AppButton title="Delete Transaction" variant="danger" onPress={handleDelete} />
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaScreen>
   );
 }
 

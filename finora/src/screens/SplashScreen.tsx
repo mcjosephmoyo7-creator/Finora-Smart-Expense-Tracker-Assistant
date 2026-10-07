@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { View, Animated, Easing, StyleSheet } from 'react-native';
+import SafeAreaScreen from '../components/SafeAreaScreen';
 
 const BRAND = '#0E5A4A';
 const BAR_TARGETS = [22, 38, 56];
@@ -33,46 +34,52 @@ export default function SplashScreen({ onFinish }: { onFinish?: () => void }) {
   }, []);
 
   return (
-    <Animated.View style={[styles.container, { opacity: screen }]}>
-      <Animated.View
-        style={[
-          styles.tile,
-          { opacity: tile, transform: [{ scale: tile.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }] },
-        ]}
-      >
-        <View style={styles.barRow}>
-          {bars.map((b, i) => (
-            <Animated.View
-              key={i}
+    <SafeAreaScreen style={styles.container}>
+      <Animated.View style={[styles.container, { opacity: screen }]}>
+        <View style={styles.brandRow}>
+          <Animated.View
+            style={[
+              styles.tile,
+              { opacity: tile, transform: [{ scale: tile.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }] },
+            ]}
+          >
+            <View style={styles.barRow}>
+              {bars.map((b, i) => (
+                <Animated.View
+                  key={i}
+                  style={[
+                    styles.bar,
+                    {
+                      height: b.interpolate({ inputRange: [0, 1], outputRange: [0, BAR_TARGETS[i]] }),
+                      backgroundColor: i === 2 ? '#F2C14E' : '#FFFFFF',
+                      opacity: i === 2 ? 1 : 0.9,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          </Animated.View>
+
+          <View style={styles.brandText}>
+            <Animated.Text
               style={[
-                styles.bar,
+                styles.word,
                 {
-                  height: b.interpolate({ inputRange: [0, 1], outputRange: [0, BAR_TARGETS[i]] }),
-                  backgroundColor: i === 2 ? '#F2C14E' : '#FFFFFF',
-                  opacity: i === 2 ? 1 : 0.9,
+                  opacity: word,
+                  transform: [{ translateY: word.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
                 },
               ]}
-            />
-          ))}
+            >
+              Finora
+            </Animated.Text>
+
+            <Animated.Text style={[styles.tagline, { opacity: tagline }]}>
+              Know where your money goes.
+            </Animated.Text>
+          </View>
         </View>
       </Animated.View>
-
-      <Animated.Text
-        style={[
-          styles.word,
-          {
-            opacity: word,
-            transform: [{ translateY: word.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
-          },
-        ]}
-      >
-        Finora
-      </Animated.Text>
-
-      <Animated.Text style={[styles.tagline, { opacity: tagline }]}>
-        Know where your money goes.
-      </Animated.Text>
-    </Animated.View>
+    </SafeAreaScreen>
   );
 }
 
@@ -82,6 +89,15 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 24,
+  },
+  brandText: {
+    flexShrink: 1,
   },
   tile: {
     width: 104,
@@ -104,14 +120,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   word: {
-    marginTop: 28,
     fontSize: 40,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 1,
   },
   tagline: {
-    marginTop: 8,
+    marginTop: 2,
     fontSize: 15,
     color: 'rgba(255,255,255,0.75)',
   },
