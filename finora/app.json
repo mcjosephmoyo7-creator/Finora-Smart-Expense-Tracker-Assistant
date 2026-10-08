@@ -2,6 +2,7 @@
   "expo": {
     "name": "Finora",
     "slug": "finora",
+    "scheme": "finora",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -34,7 +35,8 @@
       "expo-font",
       "expo-splash-screen",
       "@react-native-community/datetimepicker",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
