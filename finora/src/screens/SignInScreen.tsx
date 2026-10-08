@@ -14,10 +14,8 @@ import { auth } from '../firebase';
 import { colors, spacing, radius } from '../utils/theme';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
-import GoogleButton from '../components/GoogleButton';
 import FinoraLogo from '../components/FinoraLogo';
 import SafeAreaScreen from '../components/SafeAreaScreen';
-import useGoogleAuth from '../hooks/useGoogleAuth';
 
 export default function SignInScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
@@ -26,16 +24,6 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
-  const googleAuth = useGoogleAuth();
-
-  const handleGoogleSignIn = async () => {
-    setError('');
-    try {
-      await googleAuth.signIn();
-    } catch (err: any) {
-      setError(err?.message || 'Google sign-in failed. Please try again.');
-    }
-  };
 
   const handleSignIn = async () => {
     setError('');
@@ -171,14 +159,7 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
             title="Sign In"
             onPress={handleSignIn}
             loading={loading}
-            disabled={loading || googleAuth.loading}
-          />
-
-          <GoogleButton
-            onPress={handleGoogleSignIn}
-            loading={googleAuth.loading}
-            disabled={loading || googleAuth.loading}
-            style={styles.googleBtn}
+            disabled={loading}
           />
 
           <View style={styles.footerRow}>
@@ -243,9 +224,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginBottom: spacing.lg,
     marginTop: -4,
-  },
-  googleBtn: {
-    marginTop: spacing.sm,
   },
   forgotText: {
     fontSize: 13,

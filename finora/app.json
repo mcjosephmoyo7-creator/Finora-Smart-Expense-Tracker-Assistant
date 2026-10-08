@@ -2,7 +2,6 @@
   "expo": {
     "name": "Finora",
     "slug": "finora",
-    "scheme": "com.finora.finorasmartexpensetracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -35,8 +34,7 @@
       "expo-font",
       "expo-splash-screen",
       "@react-native-community/datetimepicker",
-      "@react-native-google-signin/google-signin",
-      "expo-web-browser"
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {

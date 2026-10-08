@@ -15,10 +15,8 @@ import { auth, db } from '../firebase';
 import { colors, spacing, radius } from '../utils/theme';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
-import GoogleButton from '../components/GoogleButton';
 import FinoraLogo from '../components/FinoraLogo';
 import SafeAreaScreen from '../components/SafeAreaScreen';
-import useGoogleAuth from '../hooks/useGoogleAuth';
 
 const CURRENCIES = ['$', '€', '£', '¥', '₹', '₦', 'R', 'A$', 'C$', 'CHF'];
 
@@ -31,16 +29,6 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState('');
-  const googleAuth = useGoogleAuth();
-
-  const handleGoogleSignIn = async () => {
-    setGeneralError('');
-    try {
-      await googleAuth.signIn();
-    } catch (err: any) {
-      setGeneralError(err?.message || 'Google sign-in failed. Please try again.');
-    }
-  };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -213,15 +201,8 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
             title="Create Account"
             onPress={handleSignUp}
             loading={loading}
-            disabled={loading || googleAuth.loading}
+            disabled={loading}
             style={styles.submitBtn}
-          />
-
-          <GoogleButton
-            onPress={handleGoogleSignIn}
-            loading={googleAuth.loading}
-            disabled={loading || googleAuth.loading}
-            style={styles.googleBtn}
           />
 
           <View style={styles.footerRow}>
@@ -323,9 +304,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   submitBtn: {
-    marginTop: spacing.sm,
-  },
-  googleBtn: {
     marginTop: spacing.sm,
   },
   footerRow: {
