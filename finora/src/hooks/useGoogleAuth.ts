@@ -4,7 +4,12 @@ import * as Application from 'expo-application';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { GoogleAuthProvider, signInWithCredential, User } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  signInWithCredential,
+  signInWithPopup,
+  User,
+} from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
@@ -149,20 +154,30 @@ export default function useGoogleAuth() {
     // Re-entry guard: ignore taps while an attempt is already in flight.
     if (busyRef.current) return;
 
-    if (!isConfigured) {
-      throw new Error(
-        `Google sign-in is not configured yet. Add your Google OAuth client ID as ${CLIENT_ID_ENV_VAR} to .env, then restart the app.`
-      );
-    }
-    if (!request) {
-      throw new Error(
-        'Google sign-in is still initializing. Please try again in a moment.'
-      );
-    }
-
     busyRef.current = true;
     setLoading(true);
     try {
+      // Web: use Firebase's own popup flow. It requires no OAuth client ID —
+      // Firebase uses its preconfigured web client and authorized domains
+      // (project.firebaseapp.com / localhost), which are enabled by default.
+      if (Platform.OS === 'web') {
+        const provider = new GoogleAuthProvider();
+        const userCredential = await signInWithPopup(auth, provider);
+        await ensureProfileDoc(userCredential.user);
+        return;
+      }
+
+      if (!isConfigured) {
+        throw new Error(
+          `Google sign-in is not configured yet. Create a Google OAuth client ID for this app (Google Cloud Console → Credentials → OAuth client ID), add it as ${CLIENT_ID_ENV_VAR} to .env, then restart Expo.`
+        );
+      }
+      if (!request) {
+        throw new Error(
+          'Google sign-in is still initializing. Please try again in a moment.'
+        );
+      }
+
       const result = await promptAsync();
 
       // The user closed or dismissed the browser — treat as a silent cancel.
