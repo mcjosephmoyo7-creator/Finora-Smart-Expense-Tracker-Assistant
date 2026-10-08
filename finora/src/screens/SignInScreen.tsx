@@ -24,6 +24,7 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSignIn = async () => {
     setError('');
@@ -56,15 +57,19 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
 
   const handleForgotPassword = async () => {
     setError('');
+    if (resetLoading) return;
     if (!email.trim()) {
       setError('Please enter your email above first to receive reset instructions.');
       return;
     }
+    setResetLoading(true);
     try {
       await sendPasswordResetEmail(auth, email.trim());
       setResetSent(true);
     } catch {
       setError('Could not send password reset email. Check email address.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -97,7 +102,11 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
         {resetSent && (
           <View style={styles.successBox}>
             <MaterialIcons name="check-circle" size={20} color={colors.income} />
-            <Text style={styles.successText}>Password reset email sent! Check your inbox.</Text>
+            <Text style={styles.successText}>
+              Password reset email sent to {email.trim()}. Check your inbox and
+              Spam folder, then tap the &quot;Reset password&quot; button in the
+              email.
+            </Text>
           </View>
         )}
 
@@ -115,6 +124,7 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
             onChangeText={(text) => {
               setEmail(text);
               setError('');
+              setResetSent(false);
             }}
             placeholder="you@example.com"
             keyboardType="email-address"
@@ -151,8 +161,15 @@ export default function SignInScreen({ navigation }: { navigation: any }) {
             onPress={handleForgotPassword}
             style={styles.forgotBtn}
             activeOpacity={0.7}
+            disabled={resetLoading}
           >
-            <Text style={styles.forgotText}>Forgot password?</Text>
+            <Text style={styles.forgotText}>
+              {resetLoading
+                ? 'Sending email…'
+                : resetSent
+                  ? 'Resend reset email'
+                  : 'Forgot password?'}
+            </Text>
           </TouchableOpacity>
 
           <AppButton
